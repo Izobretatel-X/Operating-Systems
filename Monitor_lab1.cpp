@@ -52,7 +52,7 @@ static void* producer(void*)
 
     pthread_mutex_lock(&monitor.mutex);
     monitor.stopping = true;
-    pthread_cond_broadcast(&monitor.condition);
+    pthread_cond_signal(&monitor.condition);
     pthread_mutex_unlock(&monitor.mutex);
     return nullptr;
 }
@@ -68,11 +68,15 @@ static void* consumer(void*)
         if (monitor.ready)
         {
             Event* event = monitor.data;
-            monitor.data = nullptr;
-            monitor.ready = false;
             printf("[Потребитель] получено:   %s\n", event->text.c_str());
             fflush(stdout);
+            pthread_mutex_unlock(&monitor.mutex);
+            
             delete event;
+
+            pthread_mutex_lock(&monitor.mutex);
+            monitor.data = nullptr;
+            monitor.ready = false;            
         }
         else if (monitor.stopping)
             break;
